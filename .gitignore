@@ -4,3 +4,4 @@ __pycache__/
 venv/
 model/__pycache__/
 model/best_model.pth
+notebook.ipynb
