@@ -1,0 +1,7 @@
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+model/__pycache__/
+model/best_model.pth
+notebook.ipynb
