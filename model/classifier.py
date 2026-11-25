@@ -16,7 +16,7 @@ x_train, y_train, x_val, y_val = split_data(x, y)
 x_train, x_val, impute, standardize = impute_and_standardize(x_train, x_val)
 x_train, x_val, y_train, y_val = preprocess_data(x_train, x_val, y_train, y_val)
 
-def dummy_classifier():
+def trivial_baseline_classifier():
     dummy_clf = DummyClassifier(strategy='most_frequent')
     dummy_clf.fit(x_train, y_train)
     dummy_predictions = dummy_clf.predict(x_val)
@@ -26,32 +26,53 @@ def dummy_classifier():
     f1 = f1_score(y_val, dummy_predictions)
     return dummy_clf, accuracy, recall, precision, f1
 
-dummy_clf, accuracy, recall, precision, f1 = dummy_classifier()
+dummy_clf, accuracy, recall, precision, f1 = trivial_baseline_classifier()
 
 
-print(f"Dummy Classifier Accuracy: {accuracy:.4f}")
-print(f"Dummy Classifier Recall: {recall:.4f}")
-print(f"Dummy Classifier Precision: {precision:.4f}")
-print(f"Dummy Classifier F1: {f1:.4f}")
+print(f"Trivial Baseline Classifier Accuracy: {accuracy:.4f}")
+print(f"Trivial Baseline Classifier Recall: {recall:.4f}")
+print(f"Trivial Baseline Classifier Precision: {precision:.4f}")
+print(f"Trivial Baseline Classifier F1: {f1:.4f}")
 print(confusion_matrix(y_val, dummy_clf.predict(x_val)))
 
 def gradient_boost_classifier():
     classifier = GradientBoostingClassifier()
     classifier.fit(x_train, y_train)
-    gradient_predictions = classifier.predict(x_val)
-    gradient_accuracy = accuracy_score(y_val, gradient_predictions)
-    gradient_recall = recall_score(y_val, gradient_predictions)
-    gradient_precision = precision_score(y_val, gradient_predictions)
-    gradient_f1 = f1_score(y_val, gradient_predictions)
-    return classifier, gradient_accuracy, gradient_recall, gradient_precision, gradient_f1, gradient_predictions
+    gradient_probabilities = classifier.predict_proba(x_val)[:,1]
+    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
+    threshold_results = []
 
-classifier, gradient_accuracy, gradient_recall, gradient_precision, gradient_f1,gradient_predictions = gradient_boost_classifier()
+    for threshold in thresholds:
+        predictions = (gradient_probabilities >= threshold).astype(int)
+        gradient_accuracy = accuracy_score(y_val, predictions)
+        gradient_recall = recall_score(y_val, predictions)
+        gradient_precision = precision_score(y_val, predictions)
+        gradient_f1 = f1_score(y_val, predictions)
 
-print(f"Gradient Boosting Classifier Accuracy: {gradient_accuracy:.4f}")
-print(f"Gradient Boosting Classifier Recall: {gradient_recall:.4f}")
-print(f"Gradient Boosting Classifier Precision: {gradient_precision:.4f}")
-print(f"Gradient Boosting Classifier F1: {gradient_f1:.4f}")
-print(confusion_matrix(y_val, gradient_predictions))
+        threshold_results.append({
+            'threshold': threshold,
+            'accuracy': gradient_accuracy,
+            'recall': gradient_recall,
+            'precision': gradient_precision,
+            'f1': gradient_f1
+        })
+
+    return classifier, threshold_results, gradient_probabilities
+
+classifier, threshold_results, gradient_probabilities = gradient_boost_classifier()
+
+print("gradient boosting classifier results for different thresholds:")
+for result in threshold_results:
+    print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}")
+
+print("confusion matrix for gradient boosting classifier at different thresholds:")
+for result in threshold_results:
+    threshold = result['threshold']
+    predictions = (gradient_probabilities >= threshold).astype(int)
+    matrix = confusion_matrix(y_val, predictions)
+    print(f"Threshold: {threshold}")
+    print(matrix)
+    
 
 def feature_importance(classifier):
     feature_importances = classifier.feature_importances_
