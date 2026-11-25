@@ -1,5 +1,5 @@
 from sklearn.dummy  import DummyClassifier
-from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
 from sklearn.ensemble import GradientBoostingClassifier
 import torch
 import pandas as pd
@@ -35,8 +35,9 @@ print(f"Trivial Baseline Classifier Precision: {precision:.4f}")
 print(f"Trivial Baseline Classifier F1: {f1:.4f}")
 print(confusion_matrix(y_val, dummy_clf.predict(x_val)))
 
-def gradient_boost_classifier():
-    classifier = GradientBoostingClassifier()
+
+def gradient_boost_classifier(random_state=None):
+    classifier = GradientBoostingClassifier(random_state=random_state)
     classifier.fit(x_train, y_train)
     gradient_probabilities = classifier.predict_proba(x_val)[:,1]
     thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -96,3 +97,26 @@ print(feature_importances)
 print(top_features)
 print(top_features_count)
 print(top_features_percentage)
+
+
+def average_precision_at_three_seeds():
+    seeds = [42, 67,69]
+    average_precisions = []
+
+    for seed in seeds:
+        random_state=seed
+        classifier, _, gradient_probabilities = gradient_boost_classifier(random_state)
+        average_precision = average_precision_score(y_val, gradient_probabilities)
+        average_precisions.append(average_precision)
+
+    mean_ap =np.average(average_precisions)
+
+    print(f"Average precision scores for seeds {seeds}: {average_precisions}")
+    print(f"average precision at three seeds: {mean_ap:.4f}")
+
+    return mean_ap
+
+mean_ap = average_precision_at_three_seeds()
+    
+
+
