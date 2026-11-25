@@ -45,6 +45,9 @@ def gradient_boost_classifier(random_state=None):
 
     for threshold in thresholds:
         predictions = (gradient_probabilities >= threshold).astype(int)
+        false_positive = np.sum((predictions == 1) & (y_val.numpy() == 0))
+        false_negative = np.sum((predictions == 0) & (y_val.numpy() == 1))
+        total_cost = false_positive * 10 + false_negative * 500
         gradient_accuracy = accuracy_score(y_val, predictions)
         gradient_recall = recall_score(y_val, predictions)
         gradient_precision = precision_score(y_val, predictions)
@@ -55,16 +58,21 @@ def gradient_boost_classifier(random_state=None):
             'accuracy': gradient_accuracy,
             'recall': gradient_recall,
             'precision': gradient_precision,
-            'f1': gradient_f1
-        })
+            'f1': gradient_f1,
+            'total_cost': total_cost
+            }
+        )
+    best_result = min(threshold_results, key=lambda result: result['total_cost'], default=None)
 
-    return classifier, threshold_results, gradient_probabilities
+    return classifier, threshold_results, gradient_probabilities,best_result
 
-classifier, threshold_results, gradient_probabilities = gradient_boost_classifier()
+classifier, threshold_results, gradient_probabilities,best_result = gradient_boost_classifier()
 
 print("gradient boosting classifier results for different thresholds:")
 for result in threshold_results:
-    print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}")
+    print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}, Total Cost: {result['total_cost']:.2f}")
+
+print(f"best threshold with the lowest total cost: {best_result['threshold']}, Total Cost: {best_result['total_cost']:.2f}")
 
 print("confusion matrix for gradient boosting classifier at different thresholds:")
 for result in threshold_results:
@@ -105,7 +113,7 @@ def average_precision_at_three_seeds():
 
     for seed in seeds:
         random_state=seed
-        classifier, _, gradient_probabilities = gradient_boost_classifier(random_state)
+        classifier, _, gradient_probabilities,best_result = gradient_boost_classifier(random_state)
         average_precision = average_precision_score(y_val, gradient_probabilities)
         average_precisions.append(average_precision)
 
