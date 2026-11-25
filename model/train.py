@@ -4,6 +4,8 @@ import numpy as np
 import torch.nn.functional as F 
 import matplotlib.pyplot as plt
 from dataloader import train_loader, val_loader
+from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
+from data import preprocess_data
 
 torch.manual_seed(42)
 
@@ -96,45 +98,4 @@ class APSClassifier(nn.Module):
 
         self.load_state_dict(checkpoint["model_state"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state"])
-
-
-train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss, = APSClassifier().fit(train_loader, val_loader, epochs=120)
-
-
-print(f"Last Epoch Result before stopping: {epoch+1}/{epochs}, Train Loss: {average_train_loss:.4f}, Val Loss: {average_val_loss:.4f}")
-print(f"Best Val Loss: {best_val_loss:.4f} at Epoch {best_epoch+1}")
-
-    
-def plot_losses(train_losses, val_losses, best_epoch, save_path=None):
-    epochs_range = range(1, len(train_losses) + 1)
-
-    plt.figure(figsize=(9, 5))
-    plt.plot(epochs_range, train_losses, label="Train loss")
-    plt.plot(epochs_range, val_losses, label="Val loss")
-
-    plt.axvline(best_epoch + 1, color="gray", linestyle="--", label=f"Best epoch ({best_epoch + 1})")
-    plt.scatter(best_epoch + 1, val_losses[best_epoch], color="red", zorder=5)
-
-    plt.xlabel("Epoch")
-    plt.ylabel("Cross-entropy loss")
-    plt.title("Training vs validation loss")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-
-    if save_path:
-        plt.savefig(save_path, dpi=150)
-    plt.show()
-
-plot_losses(train_losses, val_losses, best_epoch, save_path="loss_curve.png")
-
-def plot_metric(values, best_epoch, name):
-    plt.figure(figsize=(9, 5))
-    plt.plot(range(1, len(values) + 1), values, label=name)
-    plt.axvline(best_epoch + 1, color="gray", linestyle="--", label="Best-loss epoch")
-    plt.xlabel("Epoch")
-    plt.ylabel(name)
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+        
