@@ -23,7 +23,7 @@ class APSClassifier(nn.Module):
         w2 = self.w2(a1)
         return (w2)
 
-    def fit(self, train_loader, val_loader, epochs= 100):
+    def fit(self, train_loader, val_loader, epochs= 120):
         train_losses = []
         val_losses = []
         patience = 20
@@ -54,32 +54,56 @@ class APSClassifier(nn.Module):
                 average_val_loss = val_loss / len(val_loader)
 
                 if average_val_loss < best_val_loss:
+
                     best_val_loss = average_val_loss
                     best_epoch = epoch
-                    torch.save(self.state_dict(), checkpoint)
                     epochs_no_improve = 0
+
+                    checkpoint_data = {
+                        "model_state" : self.state_dict(),
+                        "optimizer_state" : self.optimizer.state_dict(),
+                        "epoch" : epoch,
+                        "best_val_loss" : best_val_loss
+                    }
+
+                    torch.save(checkpoint_data, checkpoint)
                 else:
                     epochs_no_improve += 1
-                    if epochs_no_improve >= patience:
-                        print(f"Early stopping at epoch {epoch+1}")
-                        break
 
+                val_losses.append(average_val_loss)
+                average_train_loss = train_loss / len(train_loader)
+                train_losses.append(average_train_loss)
 
-            val_losses.append(average_val_loss)
-            average_train_loss = train_loss / len(train_loader)
-            train_losses.append(average_train_loss)
-            self.load_state_dict(torch.load(checkpoint))
+            if epochs_no_improve >= patience:
+                epochs_no_improve += 1
+                print(f"Early stopping at epoch {epoch+1}")
+                break
 
             if epoch < 10 or epoch % 5 == 0:
                 print(f"Epoch {epoch+1}/{epochs}, Train Loss: {average_train_loss:.4f}, Val Loss: {average_val_loss:.4f}" )
 
+        self.load_checkpoint(checkpoint)
+
+        print(f"Best Val Loss: {best_val_loss:.4f} at Epoch {best_epoch+1}")
+
         return train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss,
-        
-train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss, = APSClassifier().fit(train_loader, val_loader, epochs=100)
+                
+    def load_checkpoint(self, checkpoint):
+        checkpoint = torch.load(checkpoint, weights_only=True, map_location="cpu")
+
+        print("Saved epoch:", checkpoint["epoch"] + 1)
+        print("Saved best validation loss:", checkpoint["best_val_loss"])
+
+        self.load_state_dict(checkpoint["model_state"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
 
 
-print(f"Epoch {epoch+1}/{epochs}, Train Loss: {average_train_loss:.4f}, Val Loss: {average_val_loss:.4f}")
+train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss, = APSClassifier().fit(train_loader, val_loader, epochs=120)
+
+
+print(f"Last Epoch Result before stopping: {epoch+1}/{epochs}, Train Loss: {average_train_loss:.4f}, Val Loss: {average_val_loss:.4f}")
 print(f"Best Val Loss: {best_val_loss:.4f} at Epoch {best_epoch+1}")
+
     
 def plot_losses(train_losses, val_losses, best_epoch, save_path=None):
     epochs_range = range(1, len(train_losses) + 1)
@@ -88,7 +112,6 @@ def plot_losses(train_losses, val_losses, best_epoch, save_path=None):
     plt.plot(epochs_range, train_losses, label="Train loss")
     plt.plot(epochs_range, val_losses, label="Val loss")
 
-    # mark the epoch where best_model.pth was saved
     plt.axvline(best_epoch + 1, color="gray", linestyle="--", label=f"Best epoch ({best_epoch + 1})")
     plt.scatter(best_epoch + 1, val_losses[best_epoch], color="red", zorder=5)
 
@@ -115,13 +138,3 @@ def plot_metric(values, best_epoch, name):
     plt.grid(alpha=0.3)
     plt.tight_layout()
     plt.show()
-
-
-def main():
-    train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss, = APSClassifier().fit(train_loader, val_loader, epochs=100)
-    plot_losses(train_losses, val_losses, best_epoch, save_path="loss_curve.png")
-    plot_metric(train_losses, best_epoch, "Train Loss")
-    plot_metric(val_losses, best_epoch, "Validation Loss")
-
-if __name__ == "__main__":
-    main()
