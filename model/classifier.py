@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from dataloader import train_loader, val_loader
 from data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
+import argparse
 
 
 torch.manual_seed(42)
@@ -40,7 +41,7 @@ def gradient_boost_classifier(random_state=None):
     classifier = GradientBoostingClassifier(random_state=random_state)
     classifier.fit(x_train, y_train)
     gradient_probabilities = classifier.predict_proba(x_val)[:,1]
-    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
+    thresholds = [0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01, 0.02, 0.03, 0.04, 0.05,0.06,0.07,0.08,0.09,0.1]
     threshold_results = []
 
     for threshold in thresholds:
