@@ -34,14 +34,17 @@ def predict_train_proba(model, val_loader):
 def train_threshold_classifier(random_state):
     torch.manual_seed(random_state)
     model = APSClassifier()
-    train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss = model.fit(train_loader, val_loader, epochs=120)
+    train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss = model.fit(train_loader, val_loader, epochs=120,resume_train=True,random_state=random_state)
 
     model_probabilities =(predict_train_proba(model, val_loader))
-    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
+    thresholds = [0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01, 0.02, 0.03, 0.04, 0.05,0.06,0.07,0.08,0.09,0.1]
     train_threshold_results = []
     
     for threshold in thresholds:
         predictions = (model_probabilities >= threshold).astype(int)
+        false_positive = np.sum((predictions == 1) & (y_val.numpy() == 0))
+        false_negative = np.sum((predictions == 0) & (y_val.numpy() == 1))
+        total_cost = false_positive * 10 + false_negative * 500
         train_accuracy = accuracy_score(y_val, predictions)
         train_recall = recall_score(y_val, predictions)
         train_precision = precision_score(y_val, predictions)
@@ -52,10 +55,14 @@ def train_threshold_classifier(random_state):
             'accuracy': train_accuracy,
             'recall': train_recall,
             'precision': train_precision,
-            'f1': train_f1
-        })
+            'f1': train_f1,
+            'total_cost': total_cost
+            }
+        )
+        
+    best_result = min(train_threshold_results, key=lambda result: result['total_cost'], default=None)
 
-    return model, train_threshold_results, model_probabilities, y_val
+    return model, train_threshold_results, model_probabilities, y_val, best_result
 
 def train_average_precision_at_three_seeds():
     seeds = [42, 67,69]
@@ -63,7 +70,7 @@ def train_average_precision_at_three_seeds():
 
     for seed in seeds:
         random_state=seed
-        model, _, model_probabilities, y_val = train_threshold_classifier(random_state)
+        model, _, model_probabilities, y_val, best_result = train_threshold_classifier(random_state)
         average_precision = average_precision_score(y_val, model_probabilities)
         average_precisions.append(average_precision)
 
@@ -77,11 +84,11 @@ def train_average_precision_at_three_seeds():
 mean_ap = train_average_precision_at_three_seeds()
 
 def main():
-    model, threshold_results, model_probabilities,y_val = train_threshold_classifier(random_state=42)
+    model, threshold_results, model_probabilities,y_val, best_result = train_threshold_classifier(random_state=42)
 
     print("APS Classifier results for different thresholds:")
     for result in threshold_results:
-        print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}")
+        print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}, Total Cost: {result['total_cost']:.2f}")
 
     print("confusion matrix for model at different thresholds:")
     for result in threshold_results:
@@ -90,6 +97,8 @@ def main():
         matrix = confusion_matrix(y_val, predictions)
         print(f"Threshold: {threshold}")
         print(matrix)
+
+    print(f"best threshold with the lowest total cost: {best_result['threshold']}, Total Cost: {best_result['total_cost']:.2f}")
 
 def plot_losses(train_losses, val_losses, best_epoch, save_path=None):
     epochs_range = range(1, len(train_losses) + 1)
