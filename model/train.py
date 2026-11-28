@@ -5,12 +5,10 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F 
 import matplotlib.pyplot as plt
-from dataloader import train_loader, val_loader
 from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
-from data import preprocess_data
 import os
-
-torch.manual_seed(42)
+import argparse
+torch.manual_seed(69)
 
 class APSClassifier(nn.Module):
     def __init__(self,):
@@ -128,3 +126,55 @@ class APSClassifier(nn.Module):
 
         self.load_state_dict(checkpoint["model_state"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+
+
+
+
+
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="APS Failure Prediction"
+    )
+
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run a short training test"
+    )
+
+    parser.add_argument(
+        "--evaluate",
+        action="store_true",
+        help="Evaluate a saved checkpoint"
+    )
+
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="best_model_42.pth",
+        help="Path to the model checkpoint"
+    )
+
+    parser.add_argument(
+        "--metrics-out",
+        type=str,
+        default=None,
+        help="Path to save evaluation metrics"
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed"
+    )
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    print(args)
