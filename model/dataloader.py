@@ -5,7 +5,7 @@ import os
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
-from data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
+from .data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
 
 torch.manual_seed(42)
 

@@ -13,7 +13,7 @@ torch.manual_seed(42)
 
 def load_data():
 
-    train_data = pd.read_csv("../data/aps_failure_training_set.csv", skiprows=20,na_values = ["na"])
+    train_data = pd.read_csv("data/aps_failure_training_set.csv", skiprows=20,na_values = ["na"])
 
 
     x = train_data.drop(columns=['class'])
@@ -68,7 +68,33 @@ def preprocess_data(x_train, x_val, y_train, y_val):
 
     return x_train, x_val, y_train, y_val
 
-print(x_train.dtype)
+def load_test_data():
+    test_data = pd.read_csv("data/aps_failure_test_set.csv", skiprows=20,na_values = ["na"])
+
+    x_test = test_data.drop(columns=['class'])
+    y_test = test_data['class']
+
+    return x_test, y_test
+
+x_test, y_test = load_test_data()
+
+def data_encode_test(y_test):
+    y_test = y_test.map({'neg': 0, 'pos': 1})
+    return y_test
+
+y_test = data_encode_test(y_test)
+
+
+def preprocess_test_data(x_test, y_test, impute, standardize):
+    x_test = impute.transform(x_test)
+    x_test = standardize.transform(x_test)
+    y_test = torch.tensor(y_test.values, dtype=torch.long)
+
+    return x_test, y_test
+x_test, y_test = preprocess_test_data(x_test, y_test, impute, standardize)
+
+
+print(x_test.dtype)
 print(x_val.dtype)
 print(y_train.dtype)
 print(y_val.dtype)
@@ -78,7 +104,15 @@ print(y_train.shape)
 print(y_val.shape)
 
 
-
+if __name__ == "__main__":
+    x, y = load_data()
+    y = data_encode(y)
+    x_train, y_train, x_val, y_val = split_data(x, y)
+    x_train, x_val, impute, standardize = impute_and_standardize(x_train, x_val)
+    x_train, x_val, y_train, y_val = preprocess_data(x_train, x_val, y_train, y_val)
+    x_test, y_test = load_test_data()
+    y_test = data_encode_test(y_test)
+    x_test, y_test = preprocess_test_data(x_test, y_test, impute, standardize)
 
 
 

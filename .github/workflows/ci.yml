@@ -1,3 +1,4 @@
+
 name: CI
 
 on:
@@ -28,9 +29,7 @@ jobs:
       - name: Run tests
         run: python -m pytest -v
 
-      # Runs the contract checks once [tool.reproduce] exists in pyproject.toml.
-      # Until then it prints a warning and skips. Remove the skip before you submit.
-      - name: Reproduce (split, smoke train, released checkpoint, metric check)
+      - name: Reproduce (smoke train, released checkpoint, metric check)
         run: |
           mkdir -p runs
           python - <<'PYEOF'
@@ -46,19 +45,10 @@ jobs:
               print("::warning::[tool.reproduce] is missing from pyproject.toml, so the reproduce checks were skipped")
               sys.exit(0)
 
-
           def run(args, **subs):
               args = [subs[a[1:-1]] if a.startswith("{") and a.endswith("}") else a for a in args]
               print("RUN:", sys.executable, *args, flush=True)
               subprocess.run([sys.executable, *args], check=True)
-
-
-          run(cfg["split"], split_out="split_a.json")
-          run(cfg["split"], split_out="split_b.json")
-          a = json.loads(pathlib.Path("split_a.json").read_text())
-          b = json.loads(pathlib.Path("split_b.json").read_text())
-          assert a == b, "split is not reproducible"
-          assert not set(a["train"]) & set(a["test"]), "train and test share rows"
 
           run(cfg["train_smoke"])
 

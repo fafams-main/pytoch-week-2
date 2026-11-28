@@ -1,11 +1,12 @@
+import joblib
 from sklearn.dummy  import DummyClassifier
-from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
 from sklearn.ensemble import GradientBoostingClassifier
 import torch
 import pandas as pd
 import numpy as np
-from dataloader import train_loader, val_loader
-from data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
+from .data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
+import argparse
 
 
 torch.manual_seed(42)
@@ -35,15 +36,19 @@ print(f"Trivial Baseline Classifier Precision: {precision:.4f}")
 print(f"Trivial Baseline Classifier F1: {f1:.4f}")
 print(confusion_matrix(y_val, dummy_clf.predict(x_val)))
 
-def gradient_boost_classifier():
-    classifier = GradientBoostingClassifier()
+
+def gradient_boost_classifier(random_state=None):
+    classifier = GradientBoostingClassifier(random_state=random_state)
     classifier.fit(x_train, y_train)
     gradient_probabilities = classifier.predict_proba(x_val)[:,1]
-    thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
+    thresholds = [0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01, 0.02, 0.03, 0.04, 0.05,0.06,0.07,0.08,0.09,0.1]
     threshold_results = []
 
     for threshold in thresholds:
         predictions = (gradient_probabilities >= threshold).astype(int)
+        false_positive = np.sum((predictions == 1) & (y_val.numpy() == 0))
+        false_negative = np.sum((predictions == 0) & (y_val.numpy() == 1))
+        total_cost = false_positive * 10 + false_negative * 500
         gradient_accuracy = accuracy_score(y_val, predictions)
         gradient_recall = recall_score(y_val, predictions)
         gradient_precision = precision_score(y_val, predictions)
@@ -54,16 +59,21 @@ def gradient_boost_classifier():
             'accuracy': gradient_accuracy,
             'recall': gradient_recall,
             'precision': gradient_precision,
-            'f1': gradient_f1
-        })
+            'f1': gradient_f1,
+            'total_cost': total_cost
+            }
+        )
+    best_result = min(threshold_results, key=lambda result: result['total_cost'], default=None)
 
-    return classifier, threshold_results, gradient_probabilities
+    return classifier, threshold_results, gradient_probabilities,best_result,impute, standardize
 
-classifier, threshold_results, gradient_probabilities = gradient_boost_classifier()
+classifier, threshold_results, gradient_probabilities,best_result,impute, standardize = gradient_boost_classifier()
 
 print("gradient boosting classifier results for different thresholds:")
 for result in threshold_results:
-    print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}")
+    print(f"Threshold: {result['threshold']}, Accuracy: {result['accuracy']:.4f}, Recall: {result['recall']:.4f}, Precision: {result['precision']:.4f}, F1: {result['f1']:.4f}, Total Cost: {result['total_cost']:.2f}")
+
+print(f"best threshold with the lowest total cost: {best_result['threshold']}, Total Cost: {best_result['total_cost']:.2f}")
 
 print("confusion matrix for gradient boosting classifier at different thresholds:")
 for result in threshold_results:
@@ -96,3 +106,27 @@ print(feature_importances)
 print(top_features)
 print(top_features_count)
 print(top_features_percentage)
+
+
+def average_precision_at_three_seeds():
+    seeds = [42, 67,69]
+    average_precisions = []
+
+    for seed in seeds:
+        random_state=seed
+        classifier, _, gradient_probabilities,best_result,impute, standardize = gradient_boost_classifier(random_state)
+        average_precision = average_precision_score(y_val, gradient_probabilities)
+        average_precisions.append(average_precision)
+
+    mean_ap =np.average(average_precisions)
+
+    print(f"Average precision scores for seeds {seeds}: {average_precisions}")
+    print(f"average precision at three seeds: {mean_ap:.4f}")
+
+    return mean_ap
+
+mean_ap = average_precision_at_three_seeds()
+
+gradient_boost_classifier = joblib.dump(classifier, 'gradient_boost_classifier.pkl')
+gradient_boost_threshold = joblib.dump(best_result['threshold'], 'gradient_boost_threshold.pkl')
+impute_and_standardize = joblib.dump((impute, standardize), 'impute_and_standardize.pkl')
