@@ -1,11 +1,11 @@
+import joblib
 from sklearn.dummy  import DummyClassifier
 from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
 from sklearn.ensemble import GradientBoostingClassifier
 import torch
 import pandas as pd
 import numpy as np
-from dataloader import train_loader, val_loader
-from data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
+from .data import load_data , data_encode, split_data, impute_and_standardize, preprocess_data
 import argparse
 
 
@@ -65,9 +65,9 @@ def gradient_boost_classifier(random_state=None):
         )
     best_result = min(threshold_results, key=lambda result: result['total_cost'], default=None)
 
-    return classifier, threshold_results, gradient_probabilities,best_result
+    return classifier, threshold_results, gradient_probabilities,best_result,impute, standardize
 
-classifier, threshold_results, gradient_probabilities,best_result = gradient_boost_classifier()
+classifier, threshold_results, gradient_probabilities,best_result,impute, standardize = gradient_boost_classifier()
 
 print("gradient boosting classifier results for different thresholds:")
 for result in threshold_results:
@@ -114,7 +114,7 @@ def average_precision_at_three_seeds():
 
     for seed in seeds:
         random_state=seed
-        classifier, _, gradient_probabilities,best_result = gradient_boost_classifier(random_state)
+        classifier, _, gradient_probabilities,best_result,impute, standardize = gradient_boost_classifier(random_state)
         average_precision = average_precision_score(y_val, gradient_probabilities)
         average_precisions.append(average_precision)
 
@@ -126,6 +126,7 @@ def average_precision_at_three_seeds():
     return mean_ap
 
 mean_ap = average_precision_at_three_seeds()
-    
 
-
+gradient_boost_classifier = joblib.dump(classifier, 'gradient_boost_classifier.pkl')
+gradient_boost_threshold = joblib.dump(best_result['threshold'], 'gradient_boost_threshold.pkl')
+impute_and_standardize = joblib.dump((impute, standardize), 'impute_and_standardize.pkl')
