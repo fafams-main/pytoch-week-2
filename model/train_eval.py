@@ -3,12 +3,13 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F 
 import matplotlib.pyplot as plt
-from dataloader import train_loader, val_loader
+from .dataloader import train_loader, val_loader
 from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, confusion_matrix,average_precision_score
-from data import load_data,preprocess_data,split_data,impute_and_standardize,data_encode
+from .data import load_data,preprocess_data,split_data,impute_and_standardize,data_encode
+import joblib
 
 
-from train import APSClassifier
+from .train import APSClassifier
 
 x, y = load_data()
 y = data_encode(y)
@@ -34,7 +35,7 @@ def predict_train_proba(model, val_loader):
 def train_threshold_classifier(random_state):
     torch.manual_seed(random_state)
     model = APSClassifier()
-    train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss = model.fit(train_loader, val_loader, epochs=120,resume_train=True,random_state=random_state)
+    train_losses, val_losses, best_val_loss, best_epoch, epochs,epoch,average_train_loss, average_val_loss = model.fit(train_loader, val_loader, epochs=120,resume_train=False,random_state=random_state)
 
     model_probabilities =(predict_train_proba(model, val_loader))
     thresholds = [0.0001,0.0002,0.0003,0.0004,0.0005,0.0006,0.0007,0.0008,0.0009,0.001,0.002,0.003,0.004,0.005,0.006,0.007,0.008,0.009,0.01, 0.02, 0.03, 0.04, 0.05,0.06,0.07,0.08,0.09,0.1]
@@ -84,7 +85,13 @@ def train_average_precision_at_three_seeds():
 mean_ap = train_average_precision_at_three_seeds()
 
 def main():
+    
     model, threshold_results, model_probabilities,y_val, best_result = train_threshold_classifier(random_state=42)
+
+    train_threshold_classifier_save = joblib.dump(model.state_dict(), 'train_test_threshold_classifier.pkl')
+    
+    train_threshold_classifier_threshold = joblib.dump(best_result['threshold'], 'train_test_threshold.pkl')
+
 
     print("APS Classifier results for different thresholds:")
     for result in threshold_results:
