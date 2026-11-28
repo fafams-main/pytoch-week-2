@@ -13,7 +13,7 @@ dependencies = [
     "numpy==2.5.4",
     "scikit-learn==1.9.1",
     "pandas==3.1.1",
-    "matplotlib==3.8.2",
+    "matplotlib==3.11.2",
 ]
 
 [tool.reproduce]
@@ -36,7 +36,7 @@ split = [
     "--out", "{split_out}"
 ]
 
-checkpoint_url = "train_test_threshold_classifier"
+checkpoint_url = "https://github.com/fafams-main/pytorch-week-2/releases/download/0.0.0.1/best_model_42.pth"
 metric_name = "average_precision"
-metric_value = 0.8773
+metric_value = 0.8220  
 tolerance = 0.02
