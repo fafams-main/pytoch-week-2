@@ -1,15 +1,42 @@
+
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "qin-pytorch-week-02"
+name = "aps-failure-prediction"
 version = "0.1.0"
-description = "A neural network from first principles"
+description = "APS Failure Prediction using PyTorch"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "torch==2.14.1",
+    "numpy==2.5.4",
+    "scikit-learn==1.9.1",
+    "pandas==3.1.1",
+    "matplotlib==3.8.2",
+]
 
 [tool.reproduce]
-train_smoke = ["-m", "src.main", "--train", "--smoke", "--checkpoint", "runs/smoke.pt"]
-evaluate = ["-m", "src.main", "--evaluate", "--checkpoint", "{checkpoint}", "--metrics-out", "{metrics_out}"]
-split = ["-m", "src.main", "--split", "--out", "{split_out}"]
-checkpoint_url = 
-metric_name = ""
-metric_value = 
-tolerance = 
+train_smoke = [
+    "-m", "model.train_eval",
+    "--smoke",
+    "--checkpoint", "runs/smoke.pt"
+]
+
+evaluate = [
+    "-m", "model.train_eval",
+    "--evaluate",
+    "--checkpoint", "{checkpoint}",
+    "--metrics-out", "{metrics_out}"
+]
+
+split = [
+    "-m", "model.data",
+    "--split",
+    "--out", "{split_out}"
+]
+
+checkpoint_url = "train_test_threshold_classifier"
+metric_name = "average_precision"
+metric_value = 0.8773
+tolerance = 0.02
